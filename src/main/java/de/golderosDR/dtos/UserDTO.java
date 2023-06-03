@@ -1,10 +1,12 @@
 package de.golderosDR.dtos;
+
+import java.util.Objects;
+
 public class UserDTO {
     private String firstName;
     private String lastName;
     private int age;
     private double height;
-
     public UserDTO(String firstName, String lastName, int age, double height) {
         this.firstName = firstName;
         this.lastName = lastName;
@@ -28,21 +30,6 @@ public class UserDTO {
         return height;
     }
 
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
-
-    public void setHeight(double height) {
-        this.height = height;
-    }
-
-    public void setAge(int age) {
-        this.age = age;
-    }
     public String toString() {
         return String.format("%s %s, age %d, height %.2f",
                 firstName,
@@ -50,5 +37,18 @@ public class UserDTO {
                 age,
                 height
         );
+    }
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof UserDTO userDTO)) return false;
+        return age == userDTO.age
+                && Double.compare(userDTO.height, height) == 0
+                && firstName.equals(userDTO.firstName)
+                && lastName.equals(userDTO.lastName);
+    }
+    @Override
+    public int hashCode() {
+        return Objects.hash(firstName, lastName, age, height);
     }
 }

@@ -7,12 +7,21 @@ public class User {
     private String lastName;
     private int age;
     private double height;
+    private Address address;
 
-    public User(String firstName, String lastName, int age, double height) {
+    public User(String firstName, String lastName, int age, double height, String street, String houseNumber) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.age = age;
         this.height = height;
+        this.address = new Address(street,houseNumber);
+    }
+    public User(String firstName, String lastName, int age, double height, Address address) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.age = age;
+        this.height = height;
+        this.address = address;
     }
 
     public String getFirstName() {
@@ -31,35 +40,32 @@ public class User {
         return height;
     }
 
+    public Address getAddress() {
+        return address;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof User user)) return false;
         return age == user.age
                 && Double.compare(user.height, height) == 0
-                && Objects.equals(firstName, user.firstName)
-                && Objects.equals(lastName, user.lastName);
+                && firstName.equals(user.firstName)
+                && lastName.equals(user.lastName);
     }
-
     @Override
     public int hashCode() {
         return Objects.hash(firstName, lastName, age, height);
     }
 
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
+    @Override
+    public String toString() {
+        return "User{" +
+                "firstName='" + firstName + '\'' +
+                ", lastName='" + lastName + '\'' +
+                ", age=" + age +
+                ", height=" + height +
+                ", address=" + address +
+                '}';
     }
-
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
-
-    public void setAge(int age) {
-        this.age = age;
-    }
-
-    public void setHeight(double height) {
-        this.height = height;
-    }
-
 }

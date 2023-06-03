@@ -1,5 +1,6 @@
 package de.golderosDR.repositories;
 
+import de.golderosDR.dtos.NewUserDTO;
 import de.golderosDR.dtos.UserDTO;
 import de.golderosDR.dtos.UserNamesDTO;
 import de.golderosDR.mappers.Mapper;
@@ -9,72 +10,82 @@ import java.io.*;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+
+import static de.golderosDR.messages.ErrorMessages.FILE_NOT_FOUND_ERROR;
+
 public class UsersRepositoryImpl implements UsersRepository {
     private final String fileName;
+
     public UsersRepositoryImpl(String fileName) {
         this.fileName = fileName;
     }
+
     @Override
     public List<UserDTO> findAll() {
         return Mapper.toUserDTOList(getAll());
     }
+
     private List<User> getAll() {
         try {
             return Mapper.toUserList(Files.readAllLines(new File(fileName).toPath()));
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException(FILE_NOT_FOUND_ERROR);
         }
     }
+
     @Override
-    public void add(UserDTO userDTO) {
+    public void add(NewUserDTO newUserDTO) {
         try (FileWriter fileWriter = new FileWriter(fileName, true);
              BufferedWriter bufferedWriter = new BufferedWriter(fileWriter)) {
-            bufferedWriter.newLine();
-            bufferedWriter.write(Mapper.toLine(userDTO));
+            bufferedWriter.write(System.lineSeparator() + Mapper.toLine(newUserDTO));
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException(FILE_NOT_FOUND_ERROR);
         }
     }
+
     @Override
     public void remove(UserDTO userDTO) {
-        StringBuilder builder = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName)))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                builder
-                        .append(line.replace(Mapper.toLine(userDTO) + System.lineSeparator(), ""))
-                        .append(System.lineSeparator());
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        List<User> users = getAll();
+        users.removeIf(user -> userDTO.equals(Mapper.toUserDTO(user)));
+        StringBuilder output = new StringBuilder();
+        for (User user : users) {
+            output.append(Mapper.toLine(user)).append(System.lineSeparator());
         }
+        output.deleteCharAt(output.length() - 1);
 
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(fileName))) {
-            writer.write(builder.toString());
+        try (FileWriter fileWriter = new FileWriter(fileName);
+             BufferedWriter writer = new BufferedWriter(fileWriter)) {
+            writer.write(output.toString());
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException(FILE_NOT_FOUND_ERROR);
         }
     }
+
     @Override
     public void update(UserDTO target, UserDTO replacement) {
-        StringBuilder builder = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(fileName)))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                builder
-                        .append(line.replace(Mapper.toLine(target), Mapper.toLine(replacement)))
-                        .append(System.lineSeparator());
+        List<User> users = getAll();
+        StringBuilder output = new StringBuilder();
+        for (User user : users) {
+            if (target.equals(Mapper.toUserDTO(user))) {
+                user = new User(
+                        replacement.getFirstName(),
+                        replacement.getLastName(),
+                        replacement.getAge(),
+                        replacement.getHeight(),
+                        user.getAddress());
             }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            output.append(Mapper.toLine(user)).append(System.lineSeparator());
         }
+        output.deleteCharAt(output.length() - 1);
 
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(fileName))) {
-            writer.write(builder.toString());
+        try (FileWriter fileWriter = new FileWriter(fileName);
+             BufferedWriter writer = new BufferedWriter(fileWriter)) {
+            writer.write(output.toString());
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException(FILE_NOT_FOUND_ERROR);
         }
     }
+
     @Override
     public UserDTO getLowest() {
         List<User> users = getAll();
@@ -86,6 +97,7 @@ public class UsersRepositoryImpl implements UsersRepository {
         }
         return Mapper.toUserDTO(users.get(indexOfLowest));
     }
+
     @Override
     public UserDTO getHighest() {
         List<User> users = getAll();
@@ -96,6 +108,12 @@ public class UsersRepositoryImpl implements UsersRepository {
             }
         }
         return Mapper.toUserDTO(users.get(indexOfHighest));
+    }
+
+    @Override
+    public boolean contains(UserDTO userDTO) {
+        List<User> users = getAll();
+        return Mapper.toUserDTOList(users).contains(userDTO);
     }
     @Override
     public double getAverageUsersAge() {
@@ -108,6 +126,7 @@ public class UsersRepositoryImpl implements UsersRepository {
         averageAge = ageSum / users.size();
         return averageAge;
     }
+
     @Override
     public UserDTO getOldest() {
         List<User> users = getAll();
@@ -119,6 +138,7 @@ public class UsersRepositoryImpl implements UsersRepository {
         }
         return Mapper.toUserDTO(users.get(indexOfOldest));
     }
+
     @Override
     public UserNamesDTO getAllNames() {
         List<User> users = getAll();
@@ -128,24 +148,28 @@ public class UsersRepositoryImpl implements UsersRepository {
         }
         return new UserNamesDTO(names);
     }
+
     @Override
     public List<UserDTO> findByName(UserNamesDTO namesDTO) {
         List<User> users = getAll();
         List<User> resultList = new ArrayList<>();
         String[] names = namesDTO.getNames();
-                if (names.length == 2) {
-                    for (User user : users) {
-                        if (user.getFirstName().equals(names[0]) && user.getLastName().equals(names[1])) {
-                            resultList.add(user);
-                        }
-                    }
-                } else  if (names.length == 1){
-                    for (User user : users) {
-                        if (user.getFirstName().equals(names[0]) || user.getLastName().equals(names[0])) {
-                            resultList.add(user);
-                        }
+        switch (names.length) {
+            case 2 -> {
+                for (User user : users) {
+                    if (user.getFirstName().equals(names[0]) && user.getLastName().equals(names[1])) {
+                        resultList.add(user);
                     }
                 }
+            }
+            case 1 -> {
+                for (User user : users) {
+                    if (user.getFirstName().equals(names[0]) || user.getLastName().equals(names[0])) {
+                        resultList.add(user);
+                    }
+                }
+            }
+        }
         return Mapper.toUserDTOList(resultList);
     }
 }
